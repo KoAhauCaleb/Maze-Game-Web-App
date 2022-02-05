@@ -1,5 +1,5 @@
 
-function draw(mazeState){
+function draw(maze){
 
     // Offset used so that the maze boarders show clearly around the maze.
     const canvasOffset = 1;
@@ -13,17 +13,17 @@ function draw(mazeState){
     context.fillStyle = "rgb(180, 180, 180)";
     context.lineWidth = 1;
 
-    //context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const cellPx = mazeState.maze.get_cell_size();
-    const heightCell = mazeState.maze.get_grid_y();
-    const widthCell = mazeState.maze.get_grid_x();
+    const cellPx = maze.get_cell_size();
+    const heightCell = maze.get_grid_y();
+    const widthCell = maze.get_grid_x();
 
-    let overlay_data = mazeState.maze.get_grid_overlay();
+    let overlay_data = maze.get_grid_overlay();
     
-    const startColor = "rgb(50, 255, 50)";
-    const endColor = "rgb(255, 20, 20)";
-    const playerColor = "rgb(100, 255, 100)";
+    const startColor = "rgb(50, 255, 50)"
+    const endColor = "rgb(255, 20, 20)"
+    const playerColor = "rgb(100, 255, 100)"
 
     
     context.fillStyle = startColor;
@@ -40,30 +40,10 @@ function draw(mazeState){
 
     console.log("generation good")
 
-    let xDrawMin = overlay_data[0] - 30
-    if (xDrawMin < 0){
-        xDrawMin = 0
-    }
-    let xDrawMax = overlay_data[0] + 30
-    if (xDrawMax > widthCell){
-        xDrawMax = widthCell
-    }
-    let yDrawMin = overlay_data[1] - 30
-    if (yDrawMin < 0){
-        yDrawMin = 0
-    }
-    let yDrawMax = overlay_data[1] + 30
-    if (yDrawMax > heightCell){
-        yDrawMax = heightCell
-    }
-    
-    context.fillStyle = "rgb(180, 180, 180)";
-    context.fillRect(yDrawMin * cellPx, xDrawMin * cellPx, 61 * cellPx, 61 * cellPx);
-
-    for (let x = xDrawMin; x < xDrawMax; x++){
-        for (let y = yDrawMin; y < yDrawMax; y++){
+    for (let x = 0; x < widthCell; x++){
+        for (let y = 0; y < heightCell; y++){
         
-            let cell = mazeState.maze.get_cell(x, y);
+            let cell = maze.get_cell(x, y);
 
             //console.log(cell)
             let xTopLeftPx = x * cellPx + canvasOffset;
@@ -114,35 +94,37 @@ function draw(mazeState){
 }   
     
 
-function controlSetup(mazeState){
+function controlSetup(maze){
     document.addEventListener('keydown', event => {
 
         // Move player based on the key pressed.
         const key = event.key;
         console.log(key); //ArrowUp ArrowLeft ArrowRight ArrowDown
         if (key === "ArrowUp"){
-            mazeState.maze.move_up();
+            maze.move_up();
         }
         if (key === "ArrowRight"){
-            mazeState.maze.move_right();
+            maze.move_right();
         }
         if (key === "ArrowDown"){
-            mazeState.maze.move_down();
+            maze.move_down();
         }
         if (key === "ArrowLeft"){
-            mazeState.maze.move_left();
+            maze.move_left();
         }
 
         // Redraw the updated maze.
-        draw(mazeState);
+        draw(maze);
 
         console.log("finished")
-        console.log(mazeState.maze.get_grid_overlay());
+        console.log(maze.get_grid_overlay());
     });
 }
 
-function newMaze(lib){
-    
+async function main(){
+    // Import lib.rs which is compiled as WebAssembly.
+    const lib = await import("../pkg/index.js").catch(console.error);
+
     //Get the selected difficulty.
     var slider = document.getElementById("my-range");
     var difficulty = slider.value;
@@ -160,65 +142,36 @@ function newMaze(lib){
     var useHeight = windowHeight - divOffset;
 
     // Create and generate a new maze.
-    const maze = new lib.Maze(useHeight - 2, useWidth - 2, difficulty);
+    let maze = new lib.Maze(useHeight - 2, useWidth - 2, difficulty);
     maze.generate_maze();
 
-    console.log("done");
-
-    return maze;
-}
-
-function start(mazeState){
-    const canvas = document.getElementById("my-canvas");
-    const context = canvas.getContext("2d");
-
-    context.fillStyle = "rgb(180, 180, 180)";
-
-    
-
     // Calculate the dimensions the generated maze needs.
-    const cellPx = mazeState.maze.get_cell_size();
-    const heightCell = mazeState.maze.get_grid_x();
-    const widthCell = mazeState.maze.get_grid_y();
+    const cellPx = maze.get_cell_size();
+    const heightCell = maze.get_grid_x();
+    const widthCell = maze.get_grid_y();
 
     // Set the canvas to the calculated dimensions.
+    const canvas = document.getElementById("my-canvas");
     canvas.width  = cellPx * widthCell + 2;
     canvas.height = cellPx * heightCell + 2;
-    
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Enable controls for moving the player.
-    controlSetup(mazeState);
+    controlSetup(maze);
+
+    console.log(maze.get_player_x);
+    console.log(maze.get_player_y);
 
     // Show the maze and its overlay on the canvas.
-    draw(mazeState);
+    draw(maze);
+
+    console.log("done");
 }
 
-async function main(){
-
-    const lib = await import("../pkg/index.js").catch(console.error);
-    
-    const maze = newMaze(lib);
-
-    console.log(maze);
-
-    var mazeState = {
-        lib,
-        maze: maze,
-    };
-    
-    console.log(mazeState.maze);
-
-    // Get reset button and attach event listener to it that recreates the page.
-    var resetButton = document.getElementById("reset-button");
-    resetButton.addEventListener("click", (event) => {
-        mazeState.maze = newMaze(lib);
-
-        start(mazeState);
-    });
-
-    start(mazeState);
-}
+// Get reset button and attach event listener to it that recreates the page.
+var resetButton = document.getElementById("reset-button");
+resetButton.addEventListener("click", event => {
+    main()
+});
 
 // create the page for the first time.
-main();
+main()
