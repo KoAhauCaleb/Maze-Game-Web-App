@@ -1,48 +1,40 @@
-## How to install
+# Overview
 
-```sh
-npm install
-```
+This project requires you to have Rust, the tool wasm-pack, and NodeJS installed. Once those conditions are met you can use "npm start" to open and play the maze in your browser.
 
-## How to run in debug mode
+This is was a project meant to help me learn WebAssembly in Rust. It builds on my [Rust maze generator](https://github.com/KoAhauCaleb/maze-generator) project. I used JavaScript to show graphics and Rust to generate and keep the game state. By using Rust, large mazes can be generated with less of an impact on perfomance.
 
-```sh
-# Builds the project and opens it in a new browser tab. Auto-reloads when the project changes.
-npm start
-```
+[Software Demo Video](https://youtu.be/DN9o5oDKg4s)
 
-## How to build in release mode
+# Web Page
 
-```sh
-# Builds the project and places it into the `dist` folder.
-npm run build
-```
+Contains a single webpage that:
+* Let's you generate a maze based on your selected difficulty.
+* View the solution for generated mazes.
+* Use the arrow keys to navigate through the maze.
 
-## How to run unit tests
+# Development Environment
 
-```sh
-# Runs tests in Firefox
-npm test -- --firefox
+Tools:
+* Rust/Cargo - Manage Rust crates and version.
+* wasm-pack - Tool for compileling Rust as WebAssembly. (cargo install wasm-pack)
+* NodeJS - Run code from computer.
 
-# Runs tests in Chrome
-npm test -- --chrome
+Crates:
+* serde - Convert Rust types to something that JavaScript can understand.
+* im:Vector - Alternative to native Vec, fixes issues when passing list to JavaScript objects.
+* wasm_bindgen - Allow Rust funtions to be used in JavaScript.
+* web_sys - Display messages in console from Rust.
 
-# Runs tests in Safari
-npm test -- --safari
-```
 
-## What does each file do?
+# Useful Websites
 
-* `Cargo.toml` contains the standard Rust metadata. You put your Rust dependencies in here. You must change this file with your details (name, description, version, authors, categories)
+* [Wasm Pack](https://rustwasm.github.io/docs/wasm-pack/quickstart.html)
+* [Rust and WebAssembly](https://rustwasm.github.io/docs/book/introduction.html)
+* [im Vector](https://docs.rs/im/15.0.0/im/struct.Vector.html)
 
-* `package.json` contains the standard npm metadata. You put your JavaScript dependencies in here. You must change this file with your details (author, name, version)
+# Future Work
 
-* `webpack.config.js` contains the Webpack configuration. You shouldn't need to change this, unless you have very special needs.
-
-* The `js` folder contains your JavaScript code (`index.js` is used to hook everything into Webpack, you don't need to change it).
-
-* The `src` folder contains your Rust code.
-
-* The `static` folder contains any files that you want copied as-is into the final build. It contains an `index.html` file which loads the `index.js` file.
-
-* The `tests` folder contains your Rust unit tests.
+* Improve graphics.
+* Add win condition.
+* Turn into actual site.

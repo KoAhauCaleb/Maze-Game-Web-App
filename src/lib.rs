@@ -137,22 +137,11 @@ impl Maze{
         //Recursively generate maze, without exceeding stack size.
         let mut x = 0;
         let mut y = 0;
-        // while x != self.grid_size_x || y != self.grid_size_y{
-        //     // If the cell has been visited, but has unvisted cell next to
-        //     // it start a new path at that spot.
-        //     if self.grid[x][y][4] && self.count_adj_unvisited(x, y)[4]{
-        //         self.rdf(x, y, 0);
-        //     }
-
-        //     x = rand::thread_rng().gen_range(0..self.grid_size_x-1);
-        //     y = rand::thread_rng().gen_range(0..self.grid_size_y-1);
-
-        // };
+        
         while self.visited_count < (self.grid_size_x) * (self.grid_size_y){
+            
             // If the cell has been visited, but has unvisted cell next to
             // it start a new path at that spot.
-            //self.visited_count -= 1;
-
             if self.grid[x][y][4] && self.count_adj_unvisited(x, y)[4]{
                 self.rdf(x, y, 0);
                 self.visited_count -= 1;
