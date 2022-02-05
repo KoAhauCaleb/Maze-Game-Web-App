@@ -1,6 +1,8 @@
 
 function draw(mazeState){
 
+    
+
     // Offset used so that the maze boarders show clearly around the maze.
     const canvasOffset = 1;
 
@@ -57,6 +59,18 @@ function draw(mazeState){
     context.fillStyle = "rgb(180, 180, 180)";
     context.fillRect(yDrawMin * cellPx, xDrawMin * cellPx, (yDrawMax - yDrawMin) * cellPx, (xDrawMax - xDrawMin) * cellPx);
 
+    if (mazeState.solution_shown === true){
+        const sol_len = mazeState.solLen;
+        //console.log(sol_len)
+
+        const sol = mazeState.maze.get_sol();
+        console.log(sol)
+        for (let x = sol_len - 1; x >= 0; x--){
+            context.fillStyle = "rgb(90, 90, 255)";
+            context.fillRect(sol[x][1] * cellPx, sol[x][0] * cellPx, cellPx, cellPx);
+        }
+    }
+
     for (let x = xDrawMin; x < xDrawMax; x++){
         for (let y = yDrawMin; y < yDrawMax; y++){
         
@@ -110,6 +124,8 @@ function draw(mazeState){
 
 }
 
+
+
 function initDraw(mazeState){
     const canvasOffset = 1;
 
@@ -125,6 +141,12 @@ function initDraw(mazeState){
     // Set the canvas to the calculated dimensions.
     canvas.width  = cellPx * widthCell + 2;
     canvas.height = cellPx * heightCell + 2;
+
+    const sol_len = mazeState.maze.get_cell_sol(heightCell - 1, widthCell - 1);
+    console.log(sol_len)
+
+    const sol = mazeState.maze.get_sol();
+    console.log(sol)
     
     context.fillStyle = "rgb(180, 180, 180)";
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -185,6 +207,94 @@ function initDraw(mazeState){
     context.fillStyle = playerColor;
     context.fillRect(overlay_data[1] * cellPx + 1, overlay_data[0] * cellPx + 1, cellPx - 1, cellPx - 1);
 }
+
+function solDraw(mazeState){
+    const canvasOffset = 1;
+
+    // Get the canvas context to enable drawing on it.
+    const canvas = document.getElementById("my-canvas");
+    const context = canvas.getContext("2d");
+
+    // Calculate the dimensions the generated maze needs.
+    const cellPx = mazeState.maze.get_cell_size();
+    const heightCell = mazeState.maze.get_grid_x();
+    const widthCell = mazeState.maze.get_grid_y();
+
+    // Set the canvas to the calculated dimensions.
+    canvas.width  = cellPx * widthCell + 2;
+    canvas.height = cellPx * heightCell + 2;
+
+    const sol_len = mazeState.maze.get_cell_sol(heightCell - 1, widthCell - 1);
+    console.log(sol_len)
+
+    mazeState["solLen"] = sol_len;
+
+    const sol = mazeState.maze.get_sol();
+    console.log(sol)
+    
+    context.fillStyle = "rgb(180, 180, 180)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    context.lineWidth = 1;
+    context.strokeStyle = "black";
+    
+    let overlay_data = mazeState.maze.get_grid_overlay();
+
+    for (let x = sol_len - 1; x >= 0; x--){
+        context.fillStyle = "rgb(90, 90, 255)";
+        context.fillRect(sol[x][1] * cellPx, sol[x][0] * cellPx, cellPx, cellPx);
+    }
+
+    for (let x = 0; x < heightCell; x++){
+        for (let y = 0; y < widthCell; y++){
+        
+            let cell = mazeState.maze.get_cell(x, y);
+            
+            let xTopLeftPx = x * cellPx + canvasOffset;
+            let yTopLeftPx = y * cellPx + canvasOffset;
+
+            if (cell[0]) { // Draw top wall.
+                context.beginPath();
+                context.moveTo(yTopLeftPx, xTopLeftPx);
+                context.lineTo(yTopLeftPx + cellPx, xTopLeftPx);
+                context.stroke();
+            }
+            if (cell[1]) { // Draw right wall.
+                context.beginPath();
+                context.moveTo(yTopLeftPx + cellPx, xTopLeftPx + cellPx);
+                context.lineTo(yTopLeftPx + cellPx, xTopLeftPx);
+                context.stroke();
+            }
+            if (cell[2]) { // Draw bottom wall.
+                context.beginPath();
+                context.moveTo(yTopLeftPx + cellPx, xTopLeftPx + cellPx);
+                context.lineTo(yTopLeftPx, xTopLeftPx + cellPx);
+                context.stroke();
+            }
+            if (cell[3]) { // Draw left wall.
+                context.beginPath();
+                context.moveTo(yTopLeftPx, xTopLeftPx);
+                context.lineTo(yTopLeftPx, xTopLeftPx + cellPx);
+                context.stroke();
+            }
+        }
+    }
+
+    const startColor = "rgb(50, 255, 50)";
+    const endColor = "rgb(255, 20, 20)";
+    const playerColor = "rgb(100, 255, 100)";
+
+    
+    context.fillStyle = startColor;
+    context.fillRect(overlay_data[3] * cellPx + 1, overlay_data[2] * cellPx + 1, cellPx - 1, cellPx - 1);
+
+    context.fillStyle = endColor;
+    context.fillRect(overlay_data[5] * cellPx + 1, overlay_data[4] * cellPx + 1, cellPx - 1, cellPx - 1);
+
+    context.fillStyle = playerColor;
+    context.fillRect(overlay_data[1] * cellPx + 1, overlay_data[0] * cellPx + 1, cellPx - 1, cellPx - 1);
+}
+
 function controlSetup(mazeState){
     document.addEventListener('keydown', event => {
 
@@ -250,6 +360,7 @@ async function main(){
     var mazeState = {
         lib,
         maze: maze,
+        solution_shown: false,
     };
     
     console.log(mazeState.maze);
@@ -258,9 +369,15 @@ async function main(){
     var resetButton = document.getElementById("reset-button");
     resetButton.addEventListener("click", (event) => {
         mazeState.maze = newMaze(lib);
-
+        mazeState.solution_shown = false;
         // Show the maze and its overlay on the canvas.
         initDraw(mazeState);
+    });
+
+    var solButton = document.getElementById("sol-button");
+    solButton.addEventListener("click", (event) => {
+        mazeState.solution_shown = true;
+        solDraw(mazeState);
     });
 
     // Enable controls for moving the player.

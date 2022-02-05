@@ -25,8 +25,10 @@ struct Maze{
     cell_size: usize,
     grid_size_x: usize,
     grid_size_y: usize,
+    visited_count: usize,
     grid: Vector<Vector<[bool; 6]>>,
     game_overlay: GameOverlay,
+    solution: Solution
 }
 
 #[wasm_bindgen]
@@ -47,8 +49,10 @@ impl Maze{
             cell_size: cell_size,
             grid_size_x: pixel_x / cell_size,
             grid_size_y: pixel_y / cell_size,
+            visited_count: 0,
             grid: Vector::new(),
             game_overlay: GameOverlay::empty(),
+            solution: Solution::new(pixel_x / cell_size, pixel_y / cell_size)
         }
     }
 
@@ -70,10 +74,22 @@ impl Maze{
     }
 
     // Get start, end, and player positions as array.
-    pub fn get_grid_overlay(&mut self) -> JsValue{
+    pub fn get_grid_overlay(&self) -> JsValue{
         let cell_overlay = self.game_overlay.get_overlay_data();
 
         JsValue::from_serde(&cell_overlay).unwrap()
+    }
+
+    // Get the pixel dimensions that will allow maze to fit on screen.
+    pub fn get_cell_sol(&self, x: usize, y: usize) -> usize{
+        let result = self.solution.get_val(x, y);
+        result
+    }
+
+    pub fn get_sol(&self) -> JsValue{
+        let result = self.solution.get_sol();
+
+        JsValue::from_serde(&result).unwrap()
     }
 
     // Get the pixel dimensions that will allow maze to fit on screen.
@@ -108,22 +124,48 @@ impl Maze{
 
     pub fn generate_maze(&mut self){
 
+        self.solution.initialize();
+
         //Create an 2d vector filled with maze cells with no connections.
         self.create_empty_grid();
         
+        self.solution.initialize();
+       
         //Generate first path in maze.
         self.rdf(0, 0, 0);
 
         //Recursively generate maze, without exceeding stack size.
-        for x in 0..self.grid_size_x {
-            for y in 0..self.grid_size_y {
-                // If the cell has been visited, but has unvisted cell next to
-                // it start a new path at that spot.
-                if self.grid[x][y][4] && self.count_adj_unvisited(x, y)[4]{
-                    self.rdf(x, y, 0);
-                }
+        let mut x = 0;
+        let mut y = 0;
+        // while x != self.grid_size_x || y != self.grid_size_y{
+        //     // If the cell has been visited, but has unvisted cell next to
+        //     // it start a new path at that spot.
+        //     if self.grid[x][y][4] && self.count_adj_unvisited(x, y)[4]{
+        //         self.rdf(x, y, 0);
+        //     }
+
+        //     x = rand::thread_rng().gen_range(0..self.grid_size_x-1);
+        //     y = rand::thread_rng().gen_range(0..self.grid_size_y-1);
+
+        // };
+        while self.visited_count < (self.grid_size_x) * (self.grid_size_y){
+            // If the cell has been visited, but has unvisted cell next to
+            // it start a new path at that spot.
+            //self.visited_count -= 1;
+
+            if self.grid[x][y][4] && self.count_adj_unvisited(x, y)[4]{
+                self.rdf(x, y, 0);
+                self.visited_count -= 1;
             }
+
+            x = rand::thread_rng().gen_range(0..self.grid_size_x-1);
+            y = rand::thread_rng().gen_range(0..self.grid_size_y-1);
+
         };
+
+        self.solution.set_maze(self.grid.clone());
+        
+        self.solution.find_solution();
         
         //After the maze has been generated, start create an overlay for it.
         self.game_overlay = GameOverlay::new(self.grid_size_x, self.grid_size_y, self.grid.clone())
@@ -131,7 +173,8 @@ impl Maze{
     
     // Uses the recursive randomized depth first algorithm to generate maze.
     pub fn rdf(&mut self, cell_x: usize, cell_y: usize, sack_size: usize) -> bool{
-        
+        self.visited_count += 1;
+
         //Find the cell next to the current one that are unvisited.
         let mut adj_unvisited = self.count_adj_unvisited(cell_x, cell_y);
         
@@ -171,8 +214,12 @@ impl Maze{
                 //Open wall in next cell.
                 let next_selected_wall = (selected_cell + 2) % 4;
                 self.grid[next_cell_x][next_cell_y][next_selected_wall] = false;
+                
+                self.solution.update_solution(cell_x, cell_y, next_cell_x, next_cell_y);
             }
-    
+            
+            
+
             //Call rdf on next cell
             canceled = self.rdf(next_cell_x, next_cell_y, sack_size + 1);
     
@@ -237,7 +284,7 @@ impl Maze{
         [cell_up, cell_right, cell_down, cell_left, adj_unvisited]
     }
 
-    ///Creates an empty grid of maze cells. The 
+    // Creates an empty grid of maze cells. The 
     fn create_empty_grid(&mut self){
 
         //Calculate grid size based on difficulty
@@ -247,7 +294,6 @@ impl Maze{
         //Create 2 dimensional vector holding arrays to represent grid,
         //arrays represent where opening in each
         //cell is at and if the the cell has been visited.
-        // let mut grid: Vector<Vector<[bool; 5]>> = Vector::new(); TODO: Redundant, in contructor.
 
         //Create the grid.
         for _row in 0..grid_size_x {
@@ -432,7 +478,7 @@ impl GameOverlay{
         self.end_trail_check(self.player_x, self.player_y, start_x, start_y);
     }
 
-    pub fn get_overlay_data(&mut self) -> [usize; 6]{
+    pub fn get_overlay_data(&self) -> [usize; 6]{
         [
             self.player_x,
             self.player_y,
@@ -441,5 +487,106 @@ impl GameOverlay{
             self.end_x - 1,
             self.end_y - 1,
         ]
+    }
+}
+
+#[derive(Clone)]
+struct Solution{
+    grid_size_x: usize,
+    grid_size_y: usize,
+    grid: Vector<Vector<usize>>,
+    maze: Vector<Vector<[bool; 6]>>,
+    solution_trail: Vec<[usize; 2]>,
+}
+
+impl Solution{
+    
+    pub fn new(grid_size_x: usize, grid_size_y: usize) -> Solution{
+        Solution{
+            grid_size_x: grid_size_x,
+            grid_size_y: grid_size_y,
+            grid: Vector::new(),
+            maze: Vector::new(),
+            solution_trail: Vec::new(),
+        }
+    }
+
+    pub fn initialize(&mut self){
+        self.create_empty_grid();
+    }
+
+    pub fn set_maze(&mut self, grid: Vector<Vector<[bool; 6]>>){
+        self.maze = grid;
+    }
+
+    pub fn update_solution(&mut self, from_x: usize, from_y: usize, to_x: usize, to_y: usize){
+        self.grid[to_x][to_y] = self.grid[from_x][from_y] + 1;
+    }
+
+    pub fn find_solution(&mut self){
+        let mut curr_cell_x = (self.grid_size_x - 1);
+        let mut curr_cell_y = self.grid_size_y - 1;
+
+        while curr_cell_x != 0 || curr_cell_y != 0{
+            self.solution_trail.push([curr_cell_x, curr_cell_y]);
+            
+            let mut next_x_dir = 0;
+            let mut next_y_dir = 0;
+            
+            let curr_val = self.grid[curr_cell_x][curr_cell_y];
+            
+            if !self.maze[curr_cell_x][curr_cell_y][0]{
+                next_x_dir = -1;
+                next_y_dir = 0;
+            }
+
+            if !self.maze[curr_cell_x][curr_cell_y][3] && (curr_val - 1 == self.grid[curr_cell_x][curr_cell_y - 1]) {
+                next_x_dir = 0;
+                next_y_dir = -1;
+            }
+
+            if !self.maze[curr_cell_x][curr_cell_y][2] && (curr_val - 1 == self.grid[curr_cell_x + 1][curr_cell_y]) {
+                next_x_dir = 1;
+                next_y_dir = 0;
+            }
+
+            if !self.maze[curr_cell_x][curr_cell_y][1] && (curr_val - 1 == self.grid[curr_cell_x][curr_cell_y + 1]) {
+                next_x_dir = 0;
+                next_y_dir = 1;
+            }
+
+            curr_cell_x = (curr_cell_x as isize + next_x_dir) as usize;
+            curr_cell_y = (curr_cell_y as isize + next_y_dir) as usize;
+        }
+    }
+
+    pub fn get_val(&self, x: usize, y: usize) -> usize{
+        self.grid[x][y]
+    }
+
+    pub fn get_sol(&self) -> Vec<[usize; 2]>{
+        self.solution_trail.clone()
+    }
+
+    // Creates an empty grid of maze cells. The 
+    fn create_empty_grid(&mut self){
+
+        //Calculate grid size based on difficulty
+        let grid_size_x = self.grid_size_x;
+        let grid_size_y = self.grid_size_y;
+
+        //Create 2 dimensional vector holding arrays to represent grid,
+        //arrays represent where opening in each
+        //cell is at and if the the cell has been visited.
+
+        //Create the grid.
+        for _row in 0..grid_size_x {
+            let mut row_vec: Vector<usize> = Vector::new();
+            for _column in 0..grid_size_y {
+                //0: top wall; 1: right wall; 2: bottom wall; 3: left wall; 4: visited, 5: trail
+                row_vec.push_back(0); 
+            }
+            self.grid.push_back(row_vec)
+        };
     }
 }
