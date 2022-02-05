@@ -349,6 +349,8 @@ impl GameOverlay{
     }
   
     pub fn add_trail(&mut self, x: usize , y: usize ){
+
+        // Add/remove trail on each cell payer visits.
         if !self.grid[x][y][5]{
             self.grid[x][y][5] = true;
         }
@@ -358,6 +360,7 @@ impl GameOverlay{
     }
 
     pub fn end_trail_check(&mut self, x: usize , y: usize, sx: usize , sy: usize){
+        
         // Check to make sure trail has been updated correctly at end of move,
         // Correct if it has not been.
         if self.grid[x][y][5]{
@@ -370,6 +373,8 @@ impl GameOverlay{
     
 
     fn cell_opening_count(&self, cell_data: [bool; 6]) -> usize{
+        
+        // Count openings cell player visits has.
         let mut count = 0;
         for wall in 0..4 {
             if cell_data[wall] == false{
@@ -382,18 +387,21 @@ impl GameOverlay{
     }
     
     pub fn move_up(&mut self){
-        //self.trail.clear();
-        //self.add_trail(self.player_x, self.player_y);
+        
         let start_x = self.player_x;
         let start_y = self.player_y;
 
         let mut player_pos = self.grid[self.player_x][self.player_y];
+
+        // Move at least once.
         if (player_pos[0] == false){
             self.add_trail(self.player_x, self.player_y);
             self.player_x -= 1;
             player_pos = self.grid[self.player_x][self.player_y];
             
         }
+
+        // Move until blocked or there is more than one opening
         while (player_pos[0] == false) && (self.cell_opening_count(player_pos) <= 2){
             self.add_trail(self.player_x, self.player_y);
             self.player_x -= 1;
@@ -403,19 +411,21 @@ impl GameOverlay{
         self.end_trail_check(self.player_x, self.player_y, start_x, start_y);
     }
     pub fn move_right(&mut self){
-        //self.trail.clear();
-        //self.add_trail(self.player_x, self.player_y);
+
         let start_x = self.player_x;
         let start_y = self.player_y;
 
-
         let mut player_pos = self.grid[self.player_x][self.player_y];
+
+        // Move at least once.
         if (player_pos[1] == false){
             self.add_trail(self.player_x, self.player_y);
             self.player_y += 1;
             player_pos = self.grid[self.player_x][self.player_y];
             
         }
+
+        // Move until blocked or there is more than one opening
         while (player_pos[1] == false) && (self.cell_opening_count(player_pos) <= 2){
             self.add_trail(self.player_x, self.player_y);
             self.player_y += 1;
@@ -425,18 +435,21 @@ impl GameOverlay{
         self.end_trail_check(self.player_x, self.player_y, start_x, start_y);
     }
     pub fn move_down(&mut self){
-        //self.trail.clear();
-        //self.add_trail(self.player_x, self.player_y);
+
         let start_x = self.player_x;
         let start_y = self.player_y;
 
         let mut player_pos = self.grid[self.player_x][self.player_y];
+
+        // Move at least once.
         if (player_pos[2] == false){
             self.add_trail(self.player_x, self.player_y);
             self.player_x += 1;
             player_pos = self.grid[self.player_x][self.player_y];
             
         }
+
+        // Move until blocked or there is more than one opening
         while (player_pos[2] == false) && (self.cell_opening_count(player_pos) <= 2){
             self.add_trail(self.player_x, self.player_y);
             self.player_x += 1;
@@ -446,18 +459,20 @@ impl GameOverlay{
         self.end_trail_check(self.player_x, self.player_y, start_x, start_y);
     }
     pub fn move_left(&mut self){
-        //self.trail.clear();
-        //self.add_trail(self.player_x, self.player_y);
         let start_x = self.player_x;
         let start_y = self.player_y;
 
         let mut player_pos = self.grid[self.player_x][self.player_y];
+
+        // Move at least once.
         if (player_pos[3] == false){
             self.add_trail(self.player_x, self.player_y);
             self.player_y -= 1;
             player_pos = self.grid[self.player_x][self.player_y];
             
         }
+
+        // Move until blocked or there is more than one opening
         while (player_pos[3] == false) && self.cell_opening_count(player_pos) <= 2{
             self.add_trail(self.player_x, self.player_y);
             self.player_y -= 1;
@@ -468,6 +483,8 @@ impl GameOverlay{
     }
 
     pub fn get_overlay_data(&self) -> [usize; 6]{
+
+        // Return positons for game objects.
         [
             self.player_x,
             self.player_y,
@@ -501,19 +518,27 @@ impl Solution{
     }
 
     pub fn initialize(&mut self){
+        
+        // Create empty 2d grid of usizes.
         self.create_empty_grid();
     }
 
     pub fn set_maze(&mut self, grid: Vector<Vector<[bool; 6]>>){
+
+        // Set walls to generated maze.
         self.maze = grid;
     }
 
     pub fn update_solution(&mut self, from_x: usize, from_y: usize, to_x: usize, to_y: usize){
+
+        // Set the distance from start for an adjacent cell.
         self.grid[to_x][to_y] = self.grid[from_x][from_y] + 1;
     }
 
     pub fn find_solution(&mut self){
-        let mut curr_cell_x = (self.grid_size_x - 1);
+        
+        //Go form end to start, check every cell exit to see if the next cell is closer to start.
+        let mut curr_cell_x = self.grid_size_x - 1;
         let mut curr_cell_y = self.grid_size_y - 1;
 
         while curr_cell_x != 0 || curr_cell_y != 0{
@@ -550,10 +575,14 @@ impl Solution{
     }
 
     pub fn get_val(&self, x: usize, y: usize) -> usize{
+        
+        //Get the length of the path to end.
         self.grid[x][y]
     }
 
     pub fn get_sol(&self) -> Vec<[usize; 2]>{
+
+        //Get array of solution cell coordinates.
         self.solution_trail.clone()
     }
 
